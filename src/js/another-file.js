@@ -1,1 +1,1 @@
-console.log('another-file.js file loaded');
+module.exports = function () { console.log('another-file.js file loaded'); }

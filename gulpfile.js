@@ -23,8 +23,8 @@ var paths = {
 	output: 'dist/',
 	scripts: {
 		input: 'src/js/*',
-		polyfills: '.polyfill.js',
-		output: 'dist/js/'
+		output: 'dist/js/',
+		entry: 'src/js/main.js'
 	},
 	styles: {
 		input: 'src/sass/**/*.{scss,sass}',
@@ -72,18 +72,14 @@ var banner = {
 // General
 var {gulp, src, dest, watch, series, parallel} = require('gulp');
 var del = require('del');
-var flatmap = require('gulp-flatmap');
-var lazypipe = require('lazypipe');
 var rename = require('gulp-rename');
 var header = require('gulp-header');
 var package = require('./package.json');
+var source = require('vinyl-source-stream');
 
 // Scripts
 var jshint = require('gulp-jshint');
-var stylish = require('jshint-stylish');
-var concat = require('gulp-concat');
-var uglify = require('gulp-terser');
-var optimizejs = require('gulp-optimize-js');
+var browserify = require('browserify');
 
 // Styles
 var sass = require('gulp-sass');
@@ -117,65 +113,20 @@ var cleanDist = function (done) {
 
 };
 
-// Repeated JavaScript tasks
-var jsTasks = lazypipe()
-	.pipe(header, banner.full, {package: package})
-	.pipe(optimizejs)
-	.pipe(dest, paths.scripts.output)
-	.pipe(rename, {suffix: '.min'})
-	.pipe(uglify)
-	.pipe(optimizejs)
-	.pipe(header, banner.min, {package: package})
-	.pipe(dest, paths.scripts.output);
-
-// Lint, minify, and concatenate scripts
-var buildScripts = function (done) {
+var bundlejs = function(done) {
 
 	// Make sure this feature is activated before running
 	if (!settings.scripts) return done();
 
-	// Run tasks on script files
-	src(paths.scripts.input)
-		.pipe(flatmap(function(stream, file) {
+	browserify(paths.scripts.entry)
+		.transform("babelify", {presets: ["@babel/preset-env"]})
+		.bundle()
+		.pipe(source('bundle.js'))
+		.pipe(header(banner.full, { package : package }))
+		.pipe(dest(paths.scripts.output));
 
-			// If the file is a directory
-			if (file.isDirectory()) {
-
-				// Setup a suffix variable
-				var suffix = '';
-
-				// If separate polyfill files enabled
-				if (settings.polyfills) {
-
-					// Update the suffix
-					suffix = '.polyfills';
-
-					// Grab files that aren't polyfills, concatenate them, and process them
-					src([file.path + '/*.js', '!' + file.path + '/*' + paths.scripts.polyfills])
-						.pipe(concat(file.relative + '.js'))
-						.pipe(jsTasks());
-
-				}
-
-				// Grab all files and concatenate them
-				// If separate polyfills enabled, this will have .polyfills in the filename
-				src(file.path + '/*.js')
-					.pipe(concat(file.relative + suffix + '.js'))
-					.pipe(jsTasks());
-
-				return stream;
-
-			}
-
-			// Otherwise, process the file
-			return stream.pipe(jsTasks());
-
-		}));
-
-	// Signal completion
-	done();
-
-};
+	return done();
+}
 
 // Lint scripts
 var lintScripts = function (done) {
@@ -298,7 +249,7 @@ var watchSource = function (done) {
 exports.default = series(
 	cleanDist,
 	parallel(
-		buildScripts,
+		bundlejs,
 		lintScripts,
 		buildStyles,
 		buildSVGs,
