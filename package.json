@@ -6,6 +6,10 @@
 		"name": "Lucas Dachman",
 		"url": "http://lucasdachman.github.io"
 	},
+  "repository": {
+		"type": "git",
+		"url": ""
+	},
 	"license": "MIT",
 	"devDependencies": {
 		"gulp": "4.0.0",

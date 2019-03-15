@@ -6,7 +6,7 @@
 var settings = {
 	clean: true,
 	scripts: true,
-	polyfills: true,
+	polyfills: false,
 	styles: true,
 	svgs: true,
 	copy: true,
@@ -266,7 +266,7 @@ var startServer = function (done) {
 	// Initialize BrowserSync
 	browserSync.init({
 		server: {
-			baseDir: paths.reload
+			baseDir: paths.reload,
 		}
 	});
 
